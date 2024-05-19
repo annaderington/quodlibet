@@ -144,7 +144,9 @@ class TSyncToPlaylist(PluginTestCase):
         cls.plugin = cls.module.SyncToPlaylist()
         cls.gtk_window = Gtk.Window()
         init_fake_app()
-
+        app.library.add(SONGS)
+        for playlist_name, playlist_songs in PLAYLISTS.items():
+            app.library.playlists.create_from_songs(playlist_songs, playlist_name)
     @classmethod
     def tearDownClass(cls):
         cls.gtk_window.destroy()
@@ -179,18 +181,12 @@ class TSyncToPlaylist(PluginTestCase):
             if button.get_label() in labels:
                 button.set_active(True)
 
-    def _fill_library(self, add_playlists=True):
-        app.library.add(SONGS)
-        if add_playlists:
-            for playlist_name, playlist_songs in PLAYLISTS.items():
-                app.library.playlists.create_from_songs(playlist_songs, playlist_name)
 
     def _reset_library(self):
         destroy_fake_app()
         init_fake_app()
 
     def test_pluginpreferences_success(self):
-        self._fill_library()
         main_vbox = self._start_plugin()
 
         self.assertEqual(type(main_vbox), Gtk.VBox)
@@ -234,14 +230,33 @@ class TSyncToPlaylist(PluginTestCase):
         self._reset_library()
 
     def test_select_saved_search(self):
+        self._start_plugin()
+
+        button = self.plugin.saved_search_vbox.get_children()[0]
+        button.set_active(True)
+        self.assertTrue(button.get_active())
+        saved_queries = self.plugin.read_sync_queries()
+        self.assertTrue(button.get_label() in saved_queries)
+
+
+    def test_unselect_saved_search(self):
+        self._start_plugin()
+
         button = self.plugin.saved_search_vbox.get_children()[0]
 
         button.set_active(True)
         self.assertTrue(button.get_active())
         saved_queries = self.plugin.read_sync_queries()
         self.assertTrue(button.get_label() in saved_queries)
+        
+        button.set_active(False)
+        self.assertTrue(not button.get_active())
+        saved_queries = self.plugin.read_sync_queries()
+        self.assertTrue(button.get_label() not in saved_queries)
 
     def test_select_saved_playlist(self):
+        self._start_plugin()
+
         button = self.plugin.saved_playlist_vbox.get_children()[0]
 
         button.set_active(True)
@@ -253,6 +268,7 @@ class TSyncToPlaylist(PluginTestCase):
         self._start_plugin()
         self.plugin.destination_entry.set_text(self.path_dest)
         self.assertEqual(self.plugin.destination_entry.get_text(), self.path_dest)
+        self._reset_library()
 
     @patch("quodlibet.qltk.ErrorMessage")
     def test_run_export_no_destination_path(self, mock_message):

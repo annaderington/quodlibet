@@ -56,63 +56,75 @@ class SyncToPlaylist(EventPlugin, PluginConfigMixin):
     summary_sep_list = "," + summary_sep
 
     def PluginPreferences(self, parent):
-        pl_lib = app.library.playlists
-        self.playlist_names = [pl.name for pl in pl_lib]
-
         main_vbox = Gtk.VBox(spacing=self.spacing_main)
         self.main_vbox = main_vbox
 
         # Read saved searches from file
         self.queries = self._get_queries()
-
         # Saved search selection frame
         saved_search_vbox = Gtk.VBox(spacing=self.spacing_large)
         self.saved_search_vbox = saved_search_vbox
+        if self.queries is not None:
+            sync_queries = self.read_sync_queries()
 
-        sync_queries = self.read_sync_queries()
-
-        # Use intersection of existing queries in case some have been deleted
-        sync_queries = list(set(self.queries.keys()).intersection(sync_queries))
-        self.write_sync_queries(sync_queries)
-        for query_name in self.queries.keys():
-            check_button = Gtk.CheckButton(label=query_name)
-            saved_search_vbox.pack_start(check_button, False, False, 0)
-            if query_name in sync_queries:
-                check_button.set_active(True)
-            check_button.connect(
-                "toggled", self._toggle_save_query, check_button, query_name
+            # Use intersection of existing queries in case some have been deleted
+            sync_queries = list(set(self.queries.keys()).intersection(sync_queries))
+            self.write_sync_queries(sync_queries)
+            for query_name in self.queries.keys():
+                check_button = Gtk.CheckButton(label=query_name)
+                saved_search_vbox.pack_start(check_button, False, False, 0)
+                if query_name in sync_queries:
+                    check_button.set_active(True)
+                check_button.connect(
+                    "toggled", self._toggle_save_query, check_button, query_name
+                )
+            saved_search_scroll = self._expandable_scroll(min_h=0, max_h=300)
+            saved_search_scroll.add(saved_search_vbox)
+            frame = qltk.Frame(
+                label=_("Synchronize the following saved searches:"),
+                child=saved_search_scroll,
             )
-        saved_search_scroll = self._expandable_scroll(min_h=0, max_h=300)
-        saved_search_scroll.add(saved_search_vbox)
-        frame = qltk.Frame(
-            label=_("Synchronize the following saved searches:"),
-            child=saved_search_scroll,
-        )
+        else:
+            frame = qltk.Frame(
+                label=_(
+                    "Saved searches have duplicate names, remove the duplicates and come back!"
+                )
+            )
         main_vbox.pack_start(frame, False, False, 0)
 
+        pl_lib = app.library.playlists
+        self.playlist_names = [pl.name for pl in pl_lib]
         # Saved playlist selection frame
         saved_playlist_vbox = Gtk.VBox(spacing=self.spacing_large)
         self.saved_playlist_vbox = saved_playlist_vbox
-        sync_playlists = self.read_sync_playlists()
 
-        # Use intersection of existing playlists in case some have been deleted
-        sync_playlists = list(set(self.playlist_names).intersection(sync_playlists))
-        self.write_sync_playlists(sync_playlists)
-        for playlist_name in self.playlist_names:
-            check_button = Gtk.CheckButton(label=playlist_name)
-            saved_playlist_vbox.pack_start(check_button, False, False, 0)
-            if playlist_name in sync_playlists:
-                check_button.set_active(True)
-            check_button.connect(
-                "toggled", self._toggle_save_playlist, check_button, playlist_name
+        if len(self.playlist_names) == len(set(self.playlist_names)):
+            sync_playlists = self.read_sync_playlists()
+
+            # Use intersection of existing playlists in case some have been deleted
+            sync_playlists = list(set(self.playlist_names).intersection(sync_playlists))
+            self.write_sync_playlists(sync_playlists)
+            for playlist_name in self.playlist_names:
+                check_button = Gtk.CheckButton(label=playlist_name)
+                saved_playlist_vbox.pack_start(check_button, False, False, 0)
+                if playlist_name in sync_playlists:
+                    check_button.set_active(True)
+                check_button.connect(
+                    "toggled", self._toggle_save_playlist, check_button, playlist_name
+                )
+
+            saved_playlist_scroll = self._expandable_scroll(min_h=0, max_h=300)
+            saved_playlist_scroll.add(saved_playlist_vbox)
+            frame = qltk.Frame(
+                label=_("Synchronize the following saved playlists:"),
+                child=saved_playlist_scroll,
             )
-
-        saved_playlist_scroll = self._expandable_scroll(min_h=0, max_h=300)
-        saved_playlist_scroll.add(saved_playlist_vbox)
-        frame = qltk.Frame(
-            label=_("Synchronize the following saved playlists:"),
-            child=saved_playlist_scroll,
-        )
+        else:
+            frame = qltk.Frame(
+                label=_(
+                    "Saved playlists have duplicate names, remove the duplicates and come back!"
+                )
+            )
         main_vbox.pack_start(frame, False, False, 0)
 
         # Destination path entry field
@@ -187,17 +199,21 @@ class SyncToPlaylist(EventPlugin, PluginConfigMixin):
     def _toggle_save_query(self, check_button, gparam, name):
         save_queries = self.read_sync_queries()
         if check_button.get_active():
-            save_queries.append(name)
+            set_queries = set(save_queries)
+            set_queries.add(name)
+            save_queries = list(set_queries)
         else:
-            save_queries = list(set(save_queries).remove(name))
+            save_queries.remove(name)
         self.write_sync_queries(query_names=save_queries)
 
     def _toggle_save_playlist(self, check_button, gparam, name):
         save_playlists = self.read_sync_playlists()
         if check_button.get_active():
-            save_playlists.append(name)
+            set_playlists = set(save_playlists)
+            set_playlists.add(name)
+            save_playlists = list(set_playlists)
         else:
-            save_playlists = list(set(save_playlists).remove(name))
+            save_playlists.remove(name)
         self.write_sync_playlists(playlist_names=save_playlists)
 
     def _get_queries(self):
@@ -207,6 +223,8 @@ class SyncToPlaylist(EventPlugin, PluginConfigMixin):
         with open(self.path_query, encoding="utf-8") as query_file:
             for query_string in query_file:
                 name = next(query_file).strip()
+                if name in queries:
+                    return None
                 queries[name] = Query(query_string.strip())
         return queries
 
