@@ -147,6 +147,7 @@ class TSyncToPlaylist(PluginTestCase):
         app.library.add(SONGS)
         for playlist_name, playlist_songs in PLAYLISTS.items():
             app.library.playlists.create_from_songs(playlist_songs, playlist_name)
+
     @classmethod
     def tearDownClass(cls):
         cls.gtk_window.destroy()
@@ -180,7 +181,6 @@ class TSyncToPlaylist(PluginTestCase):
         for button in self.plugin.saved_playlist_vbox.get_children():
             if button.get_label() in labels:
                 button.set_active(True)
-
 
     def _reset_library(self):
         destroy_fake_app()
@@ -238,6 +238,11 @@ class TSyncToPlaylist(PluginTestCase):
         saved_queries = self.plugin.read_sync_queries()
         self.assertTrue(button.get_label() in saved_queries)
 
+        button_2 = self.plugin.saved_search_vbox.get_children()[1]
+        button_2.set_active(True)
+        self.assertTrue(button_2.get_active())
+        saved_queries = self.plugin.read_sync_queries()
+        self.assertTrue(button_2.get_label() in saved_queries)
 
     def test_unselect_saved_search(self):
         self._start_plugin()
@@ -248,7 +253,7 @@ class TSyncToPlaylist(PluginTestCase):
         self.assertTrue(button.get_active())
         saved_queries = self.plugin.read_sync_queries()
         self.assertTrue(button.get_label() in saved_queries)
-        
+
         button.set_active(False)
         self.assertTrue(not button.get_active())
         saved_queries = self.plugin.read_sync_queries()
@@ -263,6 +268,14 @@ class TSyncToPlaylist(PluginTestCase):
         self.assertTrue(button.get_active())
         saved_playlists = self.plugin.read_sync_playlists()
         self.assertTrue(button.get_label() in saved_playlists)
+
+        button_2 = self.plugin.saved_playlist_vbox.get_children()[0]
+
+        button_2.set_active(True)
+        self.assertTrue(button_2.get_active())
+        saved_playlists = self.plugin.read_sync_playlists()
+        self.assertTrue(button_2.get_label() in saved_playlists)
+
 
     def test_destination_path_changed(self):
         self._start_plugin()

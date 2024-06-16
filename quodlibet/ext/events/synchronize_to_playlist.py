@@ -567,7 +567,7 @@ class SyncToPlaylist(EventPlugin, PluginConfigMixin):
                     os.makedirs(os.path.dirname(self.path_sync_playlists))
 
             with open(self.path_sync_playlists, "w", encoding="utf-8") as saved:
-                saved.write("/n".join(playlist_names))
+                saved.write("\n".join(playlist_names))
         except OSError:
             pass
 
@@ -584,7 +584,7 @@ class SyncToPlaylist(EventPlugin, PluginConfigMixin):
                     os.makedirs(os.path.dirname(self.path_sync_query))
 
             with open(self.path_sync_query, "w", encoding="utf-8") as saved:
-                saved.write("/n".join(query_names))
+                saved.write("\n".join(query_names))
         except OSError:
             pass
 
@@ -594,7 +594,8 @@ class SyncToPlaylist(EventPlugin, PluginConfigMixin):
             if not os.path.exists(self.path_sync_playlists):
                 return []
             with open(self.path_sync_playlists) as saved:
-                playlist_names = saved.readlines()
+                content = saved.read()
+                playlist_names = content.splitlines()
             return playlist_names
         except OSError:
             pass
@@ -605,7 +606,8 @@ class SyncToPlaylist(EventPlugin, PluginConfigMixin):
             if not os.path.exists(self.path_sync_query):
                 return []
             with open(self.path_sync_query) as saved:
-                query_names = saved.readlines()
+                content = saved.read()
+                query_names = content.splitlines()
             return query_names
         except OSError:
             pass
